@@ -1,0 +1,258 @@
+﻿python : 
+f:\SHAHED\gemini.py:3: 
+FutureWarning: 
+At line:1 char:1
++ python 
+f:\SHAHED\gemini.py 2> 
+test_errors.txt
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (f:\SHAHED\gem   
+ ini.py:3: FutureWa    
+rning: :String) []    
+, RemoteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+
+All support for the 
+`google.generativeai` 
+package has ended. It 
+will no longer be 
+receiving 
+updates or bug fixes. 
+Please switch to the 
+`google.genai` package 
+as soon as possible.
+See README for more 
+details:
+
+https://github.com/goog
+le-gemini/deprecated-ge
+nerative-ai-python/blob
+/main/README.md
+
+  import 
+google.generativeai as 
+genai
+Traceback (most recent 
+call last):
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\api_core\grpc_
+helpers.py", line 55, 
+in 
+error_remapped_callable
+    return 
+callable_(*args, 
+**kwargs)
+           ^^^^^^^^^^^^
+^^^^^^^^^^^^^^
+  File "C:\Python312\Li
+b\site-packages\grpc\_i
+nterceptor.py", line 
+276, in __call__
+    response, 
+ignored_call = 
+self._with_call(
+                       
+      ^^^^^^^^^^^^^^^^
+  File "C:\Python312\Li
+b\site-packages\grpc\_i
+nterceptor.py", line 
+331, in _with_call
+    return 
+call.result(), call
+           
+^^^^^^^^^^^^^
+  File "C:\Python312\Li
+b\site-packages\grpc\_c
+hannel.py", line 438, 
+in result
+    raise self
+  File "C:\Python312\Li
+b\site-packages\grpc\_i
+nterceptor.py", line 
+314, in continuation
+    response, call = se
+lf._thunk(new_method).w
+ith_call(
+                     ^^
+^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^
+  File "C:\Python312\Li
+b\site-packages\grpc\_c
+hannel.py", line 1173, 
+in with_call
+    return _end_unary_r
+esponse_blocking(state,
+ call, True, None)
+           ^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^
+  File "C:\Python312\Li
+b\site-packages\grpc\_c
+hannel.py", line 990, 
+in _end_unary_response_
+blocking
+    raise _InactiveRpcE
+rror(state)  # pytype: 
+disable=not-instantiabl
+e
+    ^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^
+grpc._channel._Inactive
+RpcError: 
+<_InactiveRpcError of 
+RPC that terminated 
+with:
+	status = 
+StatusCode.NOT_FOUND
+	details = "models/gemi
+ni-1.5-flash is not 
+found for API version 
+v1beta, or is not 
+supported for 
+generateContent. Call 
+ListModels to see the 
+list of available 
+models and their 
+supported methods."
+	debug_error_string = 
+"UNKNOWN:Error 
+received from peer ipv4
+:142.251.140.74:443 
+{grpc_status:5, grpc_me
+ssage:"models/gemini-1.
+5-flash is not found 
+for API version 
+v1beta, or is not 
+supported for 
+generateContent. Call 
+ListModels to see the 
+list of available 
+models and their 
+supported methods."}"
+>
+
+The above exception 
+was the direct cause 
+of the following 
+exception:
+
+Traceback (most recent 
+call last):
+  File 
+"f:\SHAHED\gemini.py", 
+line 98, in 
+analyze_message
+    response = 
+model.generate_content(
+               
+^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\generativeai\g
+enerative_models.py", 
+line 331, in 
+generate_content
+    response = self._cl
+ient.generate_content(
+               ^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\ai\generativel
+anguage_v1beta\services
+\generative_service\cli
+ent.py", line 835, in 
+generate_content
+    response = rpc(
+               ^^^^
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\api_core\gapic
+_v1\method.py", line 
+128, in __call__
+    return 
+wrapped_func(*args, 
+**kwargs)
+           ^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\api_core\retry
+\retry_unary.py", line 
+294, in 
+retry_wrapped_func
+    return 
+retry_target(
+           
+^^^^^^^^^^^^^
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\api_core\retry
+\retry_unary.py", line 
+156, in retry_target
+    next_sleep = 
+_retry_error_helper(
+                 
+^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\api_core\retry
+\retry_base.py", line 
+216, in 
+_retry_error_helper
+    raise final_exc 
+from source_exc
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\api_core\retry
+\retry_unary.py", line 
+147, in retry_target
+    result = target()
+             ^^^^^^^^
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\api_core\timeo
+ut.py", line 130, in 
+func_with_timeout
+    return func(*args, 
+**kwargs)
+           
+^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\10Home
+\AppData\Roaming\Python
+\Python312\site-package
+s\google\api_core\grpc_
+helpers.py", line 57, 
+in 
+error_remapped_callable
+    raise exceptions.fr
+om_grpc_error(exc) 
+from exc
+google.api_core.excepti
+ons.NotFound: 404 model
+s/gemini-1.5-flash is 
+not found for API 
+version v1beta, or is 
+not supported for 
+generateContent. Call 
+ListModels to see the 
+list of available 
+models and their 
+supported methods.

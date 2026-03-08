@@ -1,0 +1,8 @@
+venv/
+
+.gitignor/
+*.session
+.env
+pip_out*.txt
+__pycache__/
+*.log

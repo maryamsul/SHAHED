@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>شاهد — خريطة الشهادة</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@300;400;600;700;900&family=Noto+Sans+Arabic:wght@300;400;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <style>
+    /* ── Variables ── */
+    :root {
+      --black:      #f5f3ef;
+      --deep:       #ffffff;
+      --surface:    #f0ede8;
+      --border:     #ddd9d3;
+      --border2:    #c8c4be;
+      --text:       #1a1612;
+      --text-dim:   #6b6560;
+      --text-faint: #a8a4a0;
+      --red:        #c0392b;
+      --red-bright: #e74c3c;
+      --red-glow:   rgba(192, 57, 43, 0.4);
+      --amber:      #d4a017;
+      --amber-dim:  rgba(212, 160, 23, 0.15);
+      --gold:       #b8962e;
+      --panel:      320px;
+      --font-ar:    'Noto Kufi Arabic', sans-serif;
+      --font-body:  'Noto Sans Arabic', sans-serif;
+      --font-mono:  'Courier Prime', monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--black);
+      color: var(--text);
+      font-family: var(--font-body);
+      overflow: hidden;
+    }
+
+    /* ── Layout ── */
+    #app {
+      display: grid;
+      grid-template-columns: var(--panel) 1fr;
+      grid-template-rows: 48px 1fr;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ── Top Bar ── */
+    #topbar {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background: var(--black);
+      border-bottom: 1px solid var(--border);
+      z-index: 1000;
+    }
+
+    #topbar .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #topbar .logo {
+      font-family: var(--font-ar);
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--red-bright);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+
+    #topbar .logo-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    #topbar .divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border2);
+    }
+
+    #topbar .channel-tag {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    #stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .stat-value {
+      font-family: var(--font-mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--red-bright);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-faint);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    #live-dot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--red-bright);
+      animation: pulse-ring 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-ring {
+      0%   { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+      70%  { box-shadow: 0 0 0 8px rgba(231, 76, 60, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+    }
+
+    /* ── Sidebar ── */
+    #sidebar {
+      grid-column: 1;
+      grid-row: 2;
+      background: var(--deep);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 100;
+    }
+
+    #sidebar-header {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #sidebar-header h2 {
+      font-family: var(--font-ar);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+
+    #search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-family: var(--font-ar);
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      direction: rtl;
+      transition: border-color 0.2s;
+    }
+
+    #search-input::placeholder { color: var(--text-faint); }
+    #search-input:focus { border-color: var(--red); }
+
+    #village-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    #village-list::-webkit-scrollbar { width: 3px; }
+    #village-list::-webkit-scrollbar-track { background: transparent; }
+    #village-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+    .village-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+      animation: fadeIn 0.3s ease forwards;
+      opacity: 0;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-6px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .village-item:hover { background: var(--surface); }
+    .village-item.active { background: rgba(192, 57, 43, 0.08); border-right: 2px solid var(--red); }
+
+    .village-info { flex: 1; min-width: 0; }
+
+    .village-name-ar {
+      font-family: var(--font-ar);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .village-name-en {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    .attack-badge {
+      flex-shrink: 0;
+      margin-right: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .badge-count {
+      font-family: var(--font-mono);
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .badge-label {
+      font-family: var(--font-mono);
+      font-size: 8px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 1px;
+    }
+
+    /* Color tiers */
+    .tier-1 .badge-count { color: #ffd700; }
+    .tier-1 .badge-label { color: #997f00; }
+    .tier-2 .badge-count { color: #ff8c00; }
+    .tier-2 .badge-label { color: #994f00; }
+    .tier-3 .badge-count { color: #ff5500; }
+    .tier-3 .badge-label { color: #992f00; }
+    .tier-4 .badge-count { color: #ff2d2d; }
+    .tier-4 .badge-label { color: #991a1a; }
+    .tier-5 .badge-count { color: #8b0000; }
+    .tier-5 .badge-label { color: #550000; }
+
+    #sidebar-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .footer-text {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-faint);
+      letter-spacing: 1px;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* ── Map ── */
+    #map-container {
+      grid-column: 2;
+      grid-row: 2;
+      position: relative;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #f5f3ef;
+    }
+
+    /* Leaflet overrides */
+    .leaflet-container { background: #f5f3ef !important; }
+    .leaflet-control-zoom { display: none; }
+    .leaflet-control-attribution { display: none; }
+
+    /* ── Detail Panel ── */
+    #detail-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 380px;
+      height: 100%;
+      background: var(--deep);
+      border-left: 1px solid var(--border);
+      z-index: 500;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(-100%);
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+
+    #detail-panel.open { transform: translateX(0); }
+
+    #detail-close {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 28px;
+      height: 28px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 14px;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+
+    #detail-close:hover { background: var(--red); color: white; border-color: var(--red); }
+
+    #detail-header {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #detail-village-ar {
+      font-family: var(--font-ar);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      margin-top: 8px;
+    }
+
+    #detail-village-en {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    #detail-attack-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding: 6px 12px;
+      background: rgba(192, 57, 43, 0.1);
+      border: 1px solid rgba(192, 57, 43, 0.3);
+      border-radius: 3px;
+    }
+
+    #detail-attack-count .count-num {
+      font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--red-bright);
+    }
+
+    #detail-attack-count .count-label {
+      font-family: var(--font-ar);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    #detail-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    #detail-body::-webkit-scrollbar { width: 3px; }
+    #detail-body::-webkit-scrollbar-thumb { background: var(--border2); }
+
+    .detail-section-title {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 10px;
+      margin-top: 16px;
+    }
+
+    #last-message-box {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 12px 14px;
+      font-family: var(--font-ar);
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.7;
+      direction: rtl;
+    }
+
+    /* Testimonies */
+    #testimonies-list { margin-bottom: 16px; }
+
+    .testimony-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    .testimony-text {
+      font-family: var(--font-ar);
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.7;
+      direction: rtl;
+    }
+
+    .testimony-date {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      color: var(--text-faint);
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
+
+    .no-testimonies {
+      font-family: var(--font-ar);
+      font-size: 13px;
+      color: var(--text-faint);
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    /* Testimony form */
+    #testimony-form { margin-top: 8px; }
+
+    #testimony-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 10px 12px;
+      font-family: var(--font-ar);
+      font-size: 13px;
+      color: var(--text);
+      resize: none;
+      height: 80px;
+      outline: none;
+      direction: rtl;
+      transition: border-color 0.2s;
+      line-height: 1.6;
+    }
+
+    #testimony-input::placeholder { color: var(--text-faint); }
+    #testimony-input:focus { border-color: var(--red); }
+
+    #testimony-submit {
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      background: var(--red);
+      border: none;
+      border-radius: 4px;
+      color: white;
+      font-family: var(--font-ar);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    #testimony-submit:hover { background: var(--red-bright); }
+    #testimony-submit:disabled { background: var(--border2); cursor: not-allowed; color: var(--text-faint); }
+
+    #submit-feedback {
+      font-family: var(--font-ar);
+      font-size: 12px;
+      text-align: center;
+      margin-top: 6px;
+      height: 16px;
+      color: var(--amber);
+    }
+
+    /* ── Custom map markers ── */
+    .shahed-dot {
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    /* ── Loading overlay ── */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: #f5f3ef;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      gap: 16px;
+      transition: opacity 0.5s;
+    }
+
+    #loading.hidden { opacity: 0; pointer-events: none; }
+
+    .loading-title {
+      font-family: var(--font-ar);
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--red);
+      letter-spacing: -1px;
+    }
+
+    .loading-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .loading-bar-wrap {
+      width: 200px;
+      height: 2px;
+      background: #ddd9d3;
+      border-radius: 1px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+
+    .loading-bar {
+      height: 100%;
+      background: var(--red);
+      border-radius: 1px;
+      animation: load-progress 1.5s ease-in-out forwards;
+    }
+
+    @keyframes load-progress {
+      from { width: 0%; }
+      to   { width: 100%; }
+    }
+
+    /* ── Tooltip ── */
+    .leaflet-tooltip {
+      background: #ffffff !important;
+      border: 1px solid #c8c4be !important;
+      border-radius: 4px !important;
+      color: #1a1612 !important;
+      font-family: var(--font-ar) !important;
+      font-size: 13px !important;
+      padding: 6px 10px !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+      white-space: nowrap !important;
+    }
+
+    .leaflet-tooltip::before { display: none !important; }
+
+    /* ── Empty state ── */
+    #empty-state {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      opacity: 0.2;
+    }
+
+    .empty-text {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: #a8a4a0;
+      letter-spacing: 2px;
+    }
+
+    /* ── Scrollbar global ── */
+    * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  </style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading">
+  <div class="loading-title">شاهد</div>
+  <div class="loading-sub">WITNESS — Lebanon War Map</div>
+  <div class="loading-bar-wrap">
+    <div class="loading-bar"></div>
+  </div>
+</div>
+
+<!-- Main app -->
+<div id="app">
+
+  <!-- Top bar -->
+  <header id="topbar">
+    <div class="brand">
+      <div>
+        <div class="logo">شاهد</div>
+        <div class="logo-sub">SHAHED · WITNESS</div>
+      </div>
+      <div class="divider"></div>
+      <div class="channel-tag">@bintjbeilnews</div>
+    </div>
+    <div id="stats-bar">
+      <div class="stat-item">
+        <span class="stat-value" id="stat-villages">—</span>
+        <span class="stat-label">قرية</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="stat-attacks">—</span>
+        <span class="stat-label">غارة</span>
+      </div>
+      <div id="live-dot">
+        <div class="pulse-dot"></div>
+        LIVE
+      </div>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <h2>القرى او المدن الموثّقة</h2>
+      <input id="search-input" type="text" placeholder="ابحث عن قرية..." autocomplete="off" />
+    </div>
+    <div id="village-list"></div>
+    <div id="sidebar-footer">
+      <div class="footer-text">
+        البيانات من قناة @bintjbeilnews<br/>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Map -->
+  <div id="map-container">
+    <div id="map"></div>
+    <div id="empty-state" style="display:none">
+      <div class="empty-icon">🗺</div>
+      <div class="empty-text">NO DATA YET</div>
+    </div>
+
+    <!-- Detail panel (slides in from left over map) -->
+    <div id="detail-panel">
+      <button id="detail-close">✕</button>
+      <div id="detail-header">
+        <div id="detail-village-ar">—</div>
+        <div id="detail-village-en">—</div>
+        <div id="detail-attack-count">
+          <span class="count-num" id="detail-count-num">0</span>
+          <span class="count-label">غارة موثّقة</span>
+        </div>
+      </div>
+      <div id="detail-body">
+        <div class="detail-section-title">آخر رسالة</div>
+        <div id="last-message-box">—</div>
+
+        <div class="detail-section-title">الشهادات</div>
+        <div id="testimonies-list"></div>
+
+        <div class="detail-section-title">أضف شهادتك</div>
+        <div id="testimony-form">
+          <textarea id="testimony-input" placeholder="اكتب شهادتك هنا... ما رأيته، ما سمعته، ما عشته."></textarea>
+          <button id="testimony-submit">أرسل شهادتك</button>
+          <div id="submit-feedback"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CONFIG — replace with your actual backend URL ────────────────────────────
+const API_BASE = "http://localhost:8000";
+// When deployed: const API_BASE = "https://your-railway-url.up.railway.app";
+
+// ── State ────────────────────────────────────────────────────────────────────
+let allAttacks       = [];
+let markers          = {};
+let activeVillage    = null;
+let map              = null;
+
+// ── Map Init ─────────────────────────────────────────────────────────────────
+function initMap() {
+  map = L.map("map", {
+    center: [33.85, 35.9],
+    zoom: 8,
+    minZoom: 7,
+    maxZoom: 14,
+    zoomControl: false,
+    attributionControl: false,
+    maxBounds: [[33.0, 34.8], [34.8, 36.8]],
+    maxBoundsViscosity: 0.9,
+  });
+
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    { subdomains: "abcd", maxZoom: 19 }
+  ).addTo(map);
+}
+
+// ── Dot styling ──────────────────────────────────────────────────────────────
+function getDotSize(n) {
+  if (n >= 50) return 30;
+  if (n >= 20) return 22;
+  if (n >= 10) return 16;
+  if (n >= 3)  return 11;
+  return 7;
+}
+
+function getDotColor(n) {
+  if (n >= 50) return "#8b0000";
+  if (n >= 20) return "#ff2d2d";
+  if (n >= 10) return "#ff5500";
+  if (n >= 3)  return "#ff8c00";
+  return "#ffd700";
+}
+
+function getTier(n) {
+  if (n >= 50) return 5;
+  if (n >= 20) return 4;
+  if (n >= 10) return 3;
+  if (n >= 3)  return 2;
+  return 1;
+}
+
+// ── Render attacks on map ────────────────────────────────────────────────────
+function renderMarkers(attacks) {
+  // Clear old markers
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+
+  if (!attacks.length) {
+    document.getElementById("empty-state").style.display = "block";
+    return;
+  }
+  document.getElementById("empty-state").style.display = "none";
+
+  attacks.forEach(attack => {
+    if (!attack.lat || !attack.lng) return;
+
+    const size  = getDotSize(attack.attack_count);
+    const color = getDotColor(attack.attack_count);
+
+    const icon = L.divIcon({
+      className: "",
+      html: `<div style="
+        width:${size}px;
+        height:${size}px;
+        background:${color};
+        border-radius:50%;
+        box-shadow:0 0 ${size * 1.5}px ${color},0 0 ${size * 0.6}px ${color};
+        cursor:pointer;
+        transition:transform 0.15s;
+      " onmouseover="this.style.transform='scale(1.4)'" onmouseout="this.style.transform='scale(1)'"></div>`,
+      iconSize:   [size, size],
+      iconAnchor: [size / 2, size / 2],
+    });
+
+    const marker = L.marker([attack.lat, attack.lng], { icon })
+      .addTo(map)
+      .bindTooltip(
+        `<strong>${attack.village_ar}</strong><br/><span style="font-family:monospace;font-size:10px;color:#888">${attack.attack_count} غارة</span>`,
+        { direction: "top", offset: [0, -size / 2] }
+      )
+      .on("click", () => openDetail(attack));
+
+    markers[attack.village_ar] = marker;
+  });
+}
+
+// ── Render sidebar list ───────────────────────────────────────────────────────
+function renderList(attacks) {
+  const list = document.getElementById("village-list");
+  list.innerHTML = "";
+
+  if (!attacks.length) {
+    list.innerHTML = `<div style="padding:20px;text-align:center;font-family:monospace;font-size:11px;color:#3a3530">لا توجد بيانات</div>`;
+    return;
+  }
+
+  const sorted = [...attacks].sort((a, b) => b.attack_count - a.attack_count);
+
+  sorted.forEach((attack, i) => {
+    const tier = getTier(attack.attack_count);
+    const item = document.createElement("div");
+    item.className = `village-item tier-${tier}`;
+    item.style.animationDelay = `${i * 20}ms`;
+    item.dataset.village = attack.village_ar;
+
+    item.innerHTML = `
+      <div class="attack-badge tier-${tier}">
+        <span class="badge-count">${attack.attack_count}</span>
+        <span class="badge-label">غارة</span>
+      </div>
+      <div class="village-info">
+        <div class="village-name-ar">${attack.village_ar}</div>
+        <div class="village-name-en">${attack.village_en || ""}</div>
+      </div>
+    `;
+
+    item.addEventListener("click", () => {
+      openDetail(attack);
+      if (attack.lat && attack.lng) {
+        map.setView([attack.lat, attack.lng], 12, { animate: true });
+      }
+    });
+
+    list.appendChild(item);
+  });
+}
+
+// ── Update stats bar ─────────────────────────────────────────────────────────
+function updateStats(attacks) {
+  const totalAttacks = attacks.reduce((s, a) => s + a.attack_count, 0);
+  document.getElementById("stat-villages").textContent = attacks.length;
+  document.getElementById("stat-attacks").textContent  = totalAttacks;
+
+  fetch(`${API_BASE}/stats`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById("stat-testimonies").textContent = d.total_testimonies ?? "—";
+    })
+    .catch(() => {});
+}
+
+// ── Open detail panel ────────────────────────────────────────────────────────
+function openDetail(attack) {
+  activeVillage = attack.village_ar;
+
+  // Update active state in sidebar
+  document.querySelectorAll(".village-item").forEach(el => {
+    el.classList.toggle("active", el.dataset.village === activeVillage);
+  });
+
+  // Populate header
+  document.getElementById("detail-village-ar").textContent  = attack.village_ar;
+  document.getElementById("detail-village-en").textContent  = attack.village_en || "";
+  document.getElementById("detail-count-num").textContent   = attack.attack_count;
+  document.getElementById("last-message-box").textContent   = attack.original_msg || "—";
+
+  // Open panel
+  document.getElementById("detail-panel").classList.add("open");
+
+  // Clear old testimony input
+  document.getElementById("testimony-input").value = "";
+  document.getElementById("submit-feedback").textContent = "";
+
+  // Load testimonies
+  loadTestimonies(attack.village_ar);
+}
+
+// ── Load testimonies ─────────────────────────────────────────────────────────
+function loadTestimonies(village_ar) {
+  const list = document.getElementById("testimonies-list");
+  list.innerHTML = `<div style="font-family:monospace;font-size:10px;color:#3a3530;padding:10px 0">جارٍ التحميل...</div>`;
+
+  fetch(`${API_BASE}/testimonies/${encodeURIComponent(village_ar)}`)
+    .then(r => r.json())
+    .then(data => {
+      list.innerHTML = "";
+      if (!data.length) {
+        list.innerHTML = `<div class="no-testimonies">لا توجد شهادات بعد — كن أول من يشهد</div>`;
+        return;
+      }
+      data.forEach(t => {
+        const card = document.createElement("div");
+        card.className = "testimony-card";
+        const date = t.created_at ? new Date(t.created_at).toLocaleDateString("ar-LB") : "";
+        card.innerHTML = `
+          <div class="testimony-text">${t.message}</div>
+          <div class="testimony-date">${date}</div>
+        `;
+        list.appendChild(card);
+      });
+    })
+    .catch(() => {
+      list.innerHTML = `<div class="no-testimonies">تعذّر تحميل الشهادات</div>`;
+    });
+}
+
+// ── Submit testimony ─────────────────────────────────────────────────────────
+document.getElementById("testimony-submit").addEventListener("click", () => {
+  const input    = document.getElementById("testimony-input");
+  const feedback = document.getElementById("submit-feedback");
+  const btn      = document.getElementById("testimony-submit");
+  const text     = input.value.trim();
+
+  if (!text || !activeVillage) return;
+  if (text.length < 5) {
+    feedback.textContent = "الشهادة قصيرة جداً";
+    feedback.style.color = "#e74c3c";
+    return;
+  }
+
+  btn.disabled = true;
+  feedback.textContent = "جارٍ الإرسال...";
+  feedback.style.color = "#d4a017";
+
+  fetch(`${API_BASE}/testimonies`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify({ village_ar: activeVillage, message: text }),
+  })
+    .then(r => r.json())
+    .then(() => {
+      input.value = "";
+      feedback.textContent = "✓ شهادتك محفوظة";
+      feedback.style.color = "#27ae60";
+      loadTestimonies(activeVillage);
+      // Refresh testimonies count
+      updateStats(allAttacks);
+      setTimeout(() => { feedback.textContent = ""; }, 3000);
+    })
+    .catch(() => {
+      feedback.textContent = "خطأ في الإرسال";
+      feedback.style.color = "#e74c3c";
+    })
+    .finally(() => { btn.disabled = false; });
+});
+
+// ── Close detail panel ────────────────────────────────────────────────────────
+document.getElementById("detail-close").addEventListener("click", () => {
+  document.getElementById("detail-panel").classList.remove("open");
+  document.querySelectorAll(".village-item").forEach(el => el.classList.remove("active"));
+  activeVillage = null;
+});
+
+// ── Search ────────────────────────────────────────────────────────────────────
+document.getElementById("search-input").addEventListener("input", e => {
+  const q = e.target.value.trim();
+  if (!q) {
+    renderList(allAttacks);
+    return;
+  }
+  const filtered = allAttacks.filter(a =>
+    a.village_ar.includes(q) ||
+    (a.village_en && a.village_en.toLowerCase().includes(q.toLowerCase()))
+  );
+  renderList(filtered);
+});
+
+// ── Fetch all attacks ─────────────────────────────────────────────────────────
+function fetchAttacks() {
+  fetch(`${API_BASE}/attacks`)
+    .then(r => r.json())
+    .then(data => {
+      allAttacks = data;
+      renderMarkers(data);
+      renderList(data);
+      updateStats(data);
+    })
+    .catch(err => {
+      console.error("Failed to fetch attacks:", err);
+    });
+}
+
+// ── Auto-refresh every 15 seconds ────────────────────────────────────────────
+function startAutoRefresh() {
+  setInterval(() => {
+    fetchAttacks();
+  }, 15000);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  initMap();
+  fetchAttacks();
+  startAutoRefresh();
+
+  // Hide loading screen after 1.6s
+  setTimeout(() => {
+    document.getElementById("loading").classList.add("hidden");
+    setTimeout(() => {
+      document.getElementById("loading").remove();
+    }, 500);
+  }, 1600);
+});
+</script>
+</body>
+</html>
