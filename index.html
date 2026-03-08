@@ -54,6 +54,12 @@
       grid-template-rows: 48px 1fr;
       height: 100vh;
       width: 100vw;
+      transition: grid-template-columns 0.3s ease;
+    }
+
+    /* حالة إخفاء القائمة في الديسكتوب */
+    #app.sidebar-hidden {
+      grid-template-columns: 0px 1fr;
     }
 
     /* ── Top Bar ── */
@@ -73,6 +79,24 @@
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+
+    /* زر القائمة (هامبورغر) */
+    #mobile-menu-toggle {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 4px;
+      margin-left: 10px; /* RTL: left margin = مسافة من اليمين */
+    }
+    #mobile-menu-toggle span {
+      width: 18px;
+      height: 2px;
+      background: var(--text-dim);
     }
 
     #topbar .logo {
@@ -626,6 +650,26 @@
 
     /* ── Scrollbar global ── */
     * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+
+    /* ===== استجابة الجوال (من أول مقتطف) ===== */
+    @media (max-width: 768px) {
+      #app {
+        grid-template-columns: 1fr;
+      }
+      #sidebar {
+        position: fixed;
+        top: 48px;
+        right: 0;
+        bottom: 0;
+        width: 80%;
+        transform: translateX(100%);
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+      }
+      #sidebar.mobile-open {
+        transform: translateX(0);
+      }
+    }
   </style>
 </head>
 <body>
@@ -645,6 +689,10 @@
   <!-- Top bar -->
   <header id="topbar">
     <div class="brand">
+      <!-- زر القائمة (هامبورغر) مضاف هنا -->
+      <button id="mobile-menu-toggle" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
       <div>
         <div class="logo">شاهد</div>
         <div class="logo-sub">SHAHED · WITNESS</div>
@@ -1026,6 +1074,29 @@ window.addEventListener("load", () => {
       document.getElementById("loading").remove();
     }, 500);
   }, 1600);
+
+  // ===== منطق إظهار/إخفاء القائمة (من أول مقتطف) =====
+  const sidebar = document.getElementById('sidebar');
+  const appEl = document.getElementById('app');
+  const toggleBtn = document.getElementById('mobile-menu-toggle');
+
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation(); // منع تسليم الحدث
+    if (window.innerWidth <= 768) {
+      // وضع الجوال: قائمة منزلقة
+      sidebar.classList.toggle('mobile-open');
+    } else {
+      // وضع سطح المكتب: إخفاء كامل للـ sidebar وتمديد الخريطة
+      appEl.classList.toggle('sidebar-hidden');
+    }
+  });
+
+  // إغلاق القائمة في الجوال عند النقر على الخريطة
+  document.getElementById('map').addEventListener('click', () => {
+    if (window.innerWidth <= 768) {
+      sidebar.classList.remove('mobile-open');
+    }
+  });
 });
 </script>
 </body>
