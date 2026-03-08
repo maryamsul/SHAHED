@@ -12,3 +12,7 @@ python-socketio
 supabase
 requests
 python-dateutil
+google-genai
+
+groq
+anthropic
