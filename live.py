@@ -5,7 +5,7 @@ Real-time Telegram listener.
 Flow:
   1. New message arrives
   2. Pre-filter: length + discard words + attack keywords (no API)
-  3. Claude Haiku analyzes message → extracts Lebanese village names
+  3. Groq (Llama 3) analyzes message → extracts Lebanese village names
   4. Each name compared against villages.json → get coordinates
   5. Found in villages.json → save to Supabase (upsert)
   6. Not found in villages.json → log warning, skip
@@ -20,6 +20,7 @@ import logging
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 from supabase import create_client, Client
 from groq import Groq
 
@@ -36,19 +37,19 @@ logging.basicConfig(
 log = logging.getLogger("shahed-live")
 
 # ── Credentials ───────────────────────────────────────────────────────────────
-API_ID        = int(os.getenv("TELEGRAM_API_ID"))
-API_HASH      = os.getenv("TELEGRAM_API_HASH")
-PHONE         = os.getenv("TELEGRAM_PHONE")
-SUPABASE_URL  = os.getenv("SUPABASE_URL")
-SUPABASE_KEY  = os.getenv("SUPABASE_KEY")
-GROQ_KEY = os.getenv("GROQ_API_KEY")
+API_ID           = int(os.getenv("TELEGRAM_API_ID"))
+API_HASH         = os.getenv("TELEGRAM_API_HASH")
+TELEGRAM_SESSION = os.getenv("TELEGRAM_SESSION", "")
+SUPABASE_URL     = os.getenv("SUPABASE_URL")
+SUPABASE_KEY     = os.getenv("SUPABASE_KEY")
+GROQ_KEY         = os.getenv("GROQ_API_KEY")
 
 CHANNEL = "bintjbeilnews"
 
 # ── Clients ───────────────────────────────────────────────────────────────────
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 groq_client      = Groq(api_key=GROQ_KEY)
-MODEL            = "llama-3.3-70b-versatile"
+MODEL            = "llama-3.1-8b-instant"
 
 # ── Pre-filter: attack keywords ───────────────────────────────────────────────
 ATTACK_WORDS = [
@@ -97,7 +98,7 @@ REGION_ANCHORS = {
     "عكار":       {"village_ar": "عكار",       "village_en": "Akkar",          "lat": 34.5333, "lng": 36.1000},
 }
 
-# ── Claude system prompt ──────────────────────────────────────────────────────
+# ── Groq system prompt ────────────────────────────────────────────────────────
 VILLAGES_INDEX = json.dumps(
     {k: {"en": v.get("en", ""), "gov": v.get("gov", "")}
      for k, v in VILLAGES_DATA.items()},
@@ -137,7 +138,6 @@ def clean_message(text: str) -> str:
 
 
 def should_process(text: str) -> bool:
-    """Fast check before any API call."""
     if len(text) > 400:
         return False
     if any(word in text for word in DISCARD_WORDS):
@@ -146,14 +146,10 @@ def should_process(text: str) -> bool:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 2 — Claude extracts village names
+# STEP 2 — Groq extracts village names
 # ══════════════════════════════════════════════════════════════════════════════
 
 def ask_groq(message_text: str) -> list[str] | None:
-    """
-    Send message to Groq (Llama 3.3 70b) — free, fast (~0.3s).
-    Returns list of Arabic village/region names or None.
-    """
     try:
         response = groq_client.chat.completions.create(
             model    = MODEL,
@@ -166,8 +162,6 @@ def ask_groq(message_text: str) -> list[str] | None:
         )
 
         raw = response.choices[0].message.content.strip()
-
-        # Strip markdown fences if present
         raw = re.sub(r"```[a-z]*", "", raw).replace("```", "").strip()
 
         if raw.lower() == "null" or not raw:
@@ -189,41 +183,20 @@ def ask_groq(message_text: str) -> list[str] | None:
 # ══════════════════════════════════════════════════════════════════════════════
 
 def lookup_in_villages_json(village_ar: str) -> dict | None:
-    """
-    Compare village name from Claude against villages.json.
-    1. Exact match → return with coordinates
-    2. Normalized match (strip ال prefix) → return with coordinates
-    3. Not found → return None
-    """
-    # Exact match
     if village_ar in VILLAGES_DATA:
         d = VILLAGES_DATA[village_ar]
-        return {
-            "village_ar": village_ar,
-            "village_en": d.get("en", ""),
-            "lat":        d["lat"],
-            "lng":        d["lng"],
-        }
+        return {"village_ar": village_ar, "village_en": d.get("en", ""), "lat": d["lat"], "lng": d["lng"]}
 
-    # Normalized match
     def norm(s): return s[2:] if s.startswith("ال") else s
     norm_input = norm(village_ar)
-
     for key, d in VILLAGES_DATA.items():
         if norm(key) == norm_input:
-            return {
-                "village_ar": key,
-                "village_en": d.get("en", ""),
-                "lat":        d["lat"],
-                "lng":        d["lng"],
-            }
+            return {"village_ar": key, "village_en": d.get("en", ""), "lat": d["lat"], "lng": d["lng"]}
 
-    # Not in villages.json
     return None
 
 
 def lookup_in_region_anchors(village_ar: str) -> dict | None:
-    """Fallback: check REGION_ANCHORS for known Lebanese regions."""
     if village_ar in REGION_ANCHORS:
         return REGION_ANCHORS[village_ar].copy()
     for keyword, rdata in REGION_ANCHORS.items():
@@ -233,7 +206,7 @@ def lookup_in_region_anchors(village_ar: str) -> dict | None:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# STEP 4 — Save to Supabase (upsert)
+# STEP 4 — Save to Supabase
 # ══════════════════════════════════════════════════════════════════════════════
 
 def save_attack(loc: dict, original_msg: str, msg_date) -> bool:
@@ -280,14 +253,12 @@ async def main():
     log.info(f"Channel : @{CHANNEL}")
     log.info(f"Model   : {MODEL} via Groq (free)")
     log.info("=" * 55)
-    log.info("Step 1: Pre-filter (keyword + length + discard) — no API")
-    log.info("Step 2: Claude Haiku extracts village names")
-    log.info("Step 3: Compare against villages.json for coordinates")
-    log.info("Step 4: Save to Supabase")
-    log.info("=" * 55)
 
-    async with TelegramClient("shahed_session", API_ID, API_HASH) as client:
-        await client.start(phone=PHONE)
+    # ── StringSession — no interactive login needed on Railway ────────────────
+    session = StringSession(TELEGRAM_SESSION)
+
+    async with TelegramClient(session, API_ID, API_HASH) as client:
+        await client.start()
 
         entity = await client.get_entity(CHANNEL)
         log.info(f"✓ Connected to: {entity.title}")
@@ -304,36 +275,28 @@ async def main():
 
             log.info(f"📨 {msg_text[:80]}...")
 
-            # ── Step 1: Pre-filter ────────────────────────────────────────────
             if not should_process(msg_text):
                 log.info("  → Filtered (no keyword / too long / Israeli context)")
                 return
 
-            log.info("  → Passes filter — asking Groq (Llama 3)...")
-
-            # ── Step 2: Groq analysis ─────────────────────────────────────────
+            log.info("  → Passes filter — asking Groq...")
             village_names = ask_groq(msg_text)
 
             if not village_names:
                 log.warning("  ⚠ Groq found no Lebanese attack location.")
                 return
 
-            log.info(f"  → Claude extracted: {village_names}")
+            log.info(f"  → Groq extracted: {village_names}")
 
-            # ── Step 3+4: Compare to villages.json → save ─────────────────────
             saved_any = False
             for name in village_names:
-
-                # First: check villages.json
                 loc = lookup_in_villages_json(name)
-
                 if loc:
                     log.info(f"  ✓ '{name}' found in villages.json → saving")
                     save_attack(loc, msg_text, msg_date)
                     saved_any = True
                     continue
 
-                # Second: check region anchors
                 loc = lookup_in_region_anchors(name)
                 if loc:
                     log.info(f"  ✓ '{name}' found in regions → saving as {loc['village_ar']}")
@@ -341,13 +304,11 @@ async def main():
                     saved_any = True
                     continue
 
-                # Not found anywhere
                 log.warning(f"  ⚠ '{name}' not in villages.json or regions — skipped")
 
             if not saved_any:
                 log.warning("  ⚠ No location could be resolved to coordinates.")
 
-        # Heartbeat
         while True:
             await asyncio.sleep(60)
             log.info("⏳ Still listening...")
