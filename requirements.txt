@@ -1,23 +1,17 @@
-# Telegram bot & backend
 python-telegram-bot==20.6
 fastapi
 uvicorn
 sqlalchemy
 psycopg2-binary
-python-dotenv==1.0.0
-requests
-python-dateutil
-
-# AI
+python-dotenv
 google-generativeai
-google-genai
-groq
-anthropic
-
-# Telegram / scraping
 telethon
 twscrape
 python-socketio
+supabase
+requests
+python-dateutil
+google-genai
 
-# Supabase (use official package)
-supabase-py==2.1.1
+groq
+anthropic
