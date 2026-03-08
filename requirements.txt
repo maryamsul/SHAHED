@@ -19,6 +19,5 @@ telethon
 twscrape
 python-socketio
 
-# Supabase (fixed version for Railway)
-supabase==1.2.3
-gotrue==2.0.1
+# Supabase (use official package)
+supabase-py==2.1.1
