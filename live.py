@@ -54,8 +54,10 @@ MODEL            = "llama-3.1-8b-instant"
 # ── Pre-filter: attack keywords ───────────────────────────────────────────────
 ATTACK_WORDS = [
     "غارة", "غارات", "قصف", "استهداف", "استهدفت", "استهدف",
+    "يستهدف", "تستهدف", "استهدفت", "مستهدف",
     "ضربة", "ضربات", "مسيّرة", "مسيرة", "اغتيال", "غارتين",
     "قذائف", "قذيفة", "صواريخ", "صاروخ", "انفجار", "انفجارات",
+    "حزام ناري", "قنابل", "تفجير", "دمّر", "دمر",
 ]
 
 # ── Pre-filter: discard words ─────────────────────────────────────────────────
@@ -259,12 +261,13 @@ async def main():
 
     async with TelegramClient(session, API_ID, API_HASH) as client:
         await client.start()
+        await client.catch_up()
 
         entity = await client.get_entity(CHANNEL)
         log.info(f"✓ Connected to: {entity.title}")
         log.info("✓ Listening for new messages...\n")
 
-        @client.on(events.NewMessage(chats=entity))
+        @client.on(events.NewMessage(chats=entity, func=lambda e: True))
         async def handler(event):
             if not event.message.text:
                 return
