@@ -1,0 +1,29 @@
+# Web framework
+fastapi
+
+# ASGI server for FastAPI
+uvicorn
+
+# Database ORM
+sqlalchemy
+
+# PostgreSQL driver
+psycopg2-binary
+
+# Environment variables
+python-dotenv
+
+# Google Generative AI API
+google-generativeai
+
+# Telegram client
+telethon
+
+# Twitter scraping
+twscrape
+
+# Real-time socket communication
+python-socketio
+
+# Supabase client
+supabase
