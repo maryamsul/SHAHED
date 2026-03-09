@@ -54,12 +54,6 @@
       grid-template-rows: 48px 1fr;
       height: 100vh;
       width: 100vw;
-      transition: grid-template-columns 0.3s ease;
-    }
-
-    /* حالة إخفاء القائمة في الديسكتوب */
-    #app.sidebar-hidden {
-      grid-template-columns: 0px 1fr;
     }
 
     /* ── Top Bar ── */
@@ -79,24 +73,6 @@
       display: flex;
       align-items: center;
       gap: 12px;
-    }
-
-    /* زر القائمة (هامبورغر) */
-    #mobile-menu-toggle {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      padding: 8px;
-      cursor: pointer;
-      border-radius: 4px;
-      margin-left: 10px; /* RTL: left margin = مسافة من اليمين */
-    }
-    #mobile-menu-toggle span {
-      width: 18px;
-      height: 2px;
-      background: var(--text-dim);
     }
 
     #topbar .logo {
@@ -193,6 +169,7 @@
       flex-direction: column;
       overflow: hidden;
       z-index: 100;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     #sidebar-header {
@@ -325,6 +302,37 @@
       letter-spacing: 1px;
       text-align: center;
       line-height: 1.6;
+    }
+
+    /* ── Sidebar Toggle Button ── */
+    #sidebar-toggle {
+      position: fixed;
+      top: 60px;
+      right: 12px;
+      width: 44px;
+      height: 44px;
+      background: var(--deep);
+      border: 1px solid var(--border2);
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      transition: all 0.2s;
+      color: var(--text);
+      font-size: 20px;
+    }
+
+    #sidebar-toggle:active {
+      transform: scale(0.95);
+    }
+
+    #sidebar-toggle:hover {
+      background: var(--red);
+      color: white;
+      border-color: var(--red);
     }
 
     /* ── Map ── */
@@ -651,23 +659,92 @@
     /* ── Scrollbar global ── */
     * { scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
 
-    /* ===== استجابة الجوال (من أول مقتطف) ===== */
+    /* ── Mobile Responsive ── */
     @media (max-width: 768px) {
       #app {
         grid-template-columns: 1fr;
       }
+
       #sidebar {
         position: fixed;
         top: 48px;
         right: 0;
-        bottom: 0;
-        width: 80%;
+        width: 85%;
+        max-width: 320px;
+        height: calc(100vh - 48px);
         transform: translateX(100%);
-        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
-        transition: transform 0.3s ease;
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
       }
-      #sidebar.mobile-open {
+
+      #sidebar.open {
         transform: translateX(0);
+      }
+
+      #sidebar-toggle {
+        display: flex;
+      }
+
+      #map-container {
+        grid-column: 1;
+      }
+
+      #topbar .brand {
+        gap: 8px;
+      }
+
+      #topbar .logo {
+        font-size: 18px;
+      }
+
+      #topbar .logo-sub {
+        font-size: 8px;
+      }
+
+      #topbar .channel-tag {
+        display: none;
+      }
+
+      #topbar .divider {
+        display: none;
+      }
+
+      #stats-bar {
+        gap: 16px;
+      }
+
+      .stat-value {
+        font-size: 14px;
+      }
+
+      .stat-label {
+        font-size: 8px;
+      }
+
+      #live-dot {
+        font-size: 9px;
+      }
+
+      #detail-panel {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      #topbar {
+        padding: 0 12px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #topbar .logo {
+        font-size: 16px;
+      }
+
+      #topbar .logo-sub {
+        display: none;
+      }
+
+      .stat-item:last-of-type {
+        display: none;
       }
     }
   </style>
@@ -689,10 +766,6 @@
   <!-- Top bar -->
   <header id="topbar">
     <div class="brand">
-      <!-- زر القائمة (هامبورغر) مضاف هنا -->
-      <button id="mobile-menu-toggle" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
       <div>
         <div class="logo">شاهد</div>
         <div class="logo-sub">SHAHED · WITNESS</div>
@@ -715,6 +788,9 @@
       </div>
     </div>
   </header>
+
+  <!-- Sidebar Toggle Button (Mobile) -->
+  <button id="sidebar-toggle" title="عرض القرى">☰</button>
 
   <!-- Sidebar -->
   <aside id="sidebar">
@@ -778,6 +854,7 @@ let allAttacks       = [];
 let markers          = {};
 let activeVillage    = null;
 let map              = null;
+let sidebarOpen      = false;
 
 // ── Map Init ─────────────────────────────────────────────────────────────────
 function initMap() {
@@ -903,6 +980,10 @@ function renderList(attacks) {
       if (attack.lat && attack.lng) {
         map.setView([attack.lat, attack.lng], 12, { animate: true });
       }
+      // Close sidebar on mobile when selecting a village
+      if (window.innerWidth <= 768) {
+        toggleSidebar();
+      }
     });
 
     list.appendChild(item);
@@ -922,6 +1003,25 @@ function updateStats(attacks) {
     })
     .catch(() => {});
 }
+
+// ── Sidebar Toggle ───────────────────────────────────────────────────────────
+function toggleSidebar() {
+  sidebarOpen = !sidebarOpen;
+  const sidebar = document.getElementById("sidebar");
+  const toggleBtn = document.getElementById("sidebar-toggle");
+  
+  if (sidebarOpen) {
+    sidebar.classList.add("open");
+    toggleBtn.innerHTML = "✕";
+    toggleBtn.title = "إخفاء القرى";
+  } else {
+    sidebar.classList.remove("open");
+    toggleBtn.innerHTML = "☰";
+    toggleBtn.title = "عرض القرى";
+  }
+}
+
+document.getElementById("sidebar-toggle").addEventListener("click", toggleSidebar);
 
 // ── Open detail panel ────────────────────────────────────────────────────────
 function openDetail(attack) {
@@ -1074,29 +1174,6 @@ window.addEventListener("load", () => {
       document.getElementById("loading").remove();
     }, 500);
   }, 1600);
-
-  // ===== منطق إظهار/إخفاء القائمة (من أول مقتطف) =====
-  const sidebar = document.getElementById('sidebar');
-  const appEl = document.getElementById('app');
-  const toggleBtn = document.getElementById('mobile-menu-toggle');
-
-  toggleBtn.addEventListener('click', (e) => {
-    e.stopPropagation(); // منع تسليم الحدث
-    if (window.innerWidth <= 768) {
-      // وضع الجوال: قائمة منزلقة
-      sidebar.classList.toggle('mobile-open');
-    } else {
-      // وضع سطح المكتب: إخفاء كامل للـ sidebar وتمديد الخريطة
-      appEl.classList.toggle('sidebar-hidden');
-    }
-  });
-
-  // إغلاق القائمة في الجوال عند النقر على الخريطة
-  document.getElementById('map').addEventListener('click', () => {
-    if (window.innerWidth <= 768) {
-      sidebar.classList.remove('mobile-open');
-    }
-  });
 });
 </script>
 </body>
