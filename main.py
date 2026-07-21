@@ -1,8 +1,3 @@
-"""
-main.py — SHAHED Project
-FastAPI backend serving attack and testimony data to the frontend.
-"""
-
 import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
