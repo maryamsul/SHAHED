@@ -17,7 +17,11 @@ app.add_middleware(
 
 supabase = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
-
+@app.get("/")
+def home():
+    return {
+        "status": "SHAHED API running"
+    }
 @app.get("/attacks")
 def get_attacks():
     result = supabase.table("attacks").select("*").execute()
