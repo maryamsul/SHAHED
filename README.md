@@ -2,7 +2,7 @@
 
 SHAHED is a real-time geospatial mapping platform designed to transform unstructured reports from Telegram channels into structured geographic insights about events across Lebanon.
 The project combines **Telegram data collection, AI-powered information extraction, geographic processing, and a web-based interactive map** to turn large amounts of unstructured Arabic reports into searchable and visualized location-based data.
-
+check it at **http://https://shahedlebanon.com/**
 **🟢 Deployed: March 7, 2026**
 ## 🚀 How SHAHED Works
 
